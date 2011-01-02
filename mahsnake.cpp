@@ -110,8 +110,8 @@ int main()
 	elem = SDL_DisplayFormat(elem_tmp);
 	SDL_FreeSurface(elem_tmp);
 
-	snake.push_back(pair< pair<int, int>, Element* >(pair<int, int>(-1, -1), new Element(screen, elem, pair<int, int>(120, 50))));
-	for(int i = 100; i > 0; i -= 20)
+	snake.push_back(pair< pair<int, int>, Element* >(pair<int, int>(-1, -1), new Element(screen, elem, pair<int, int>(100, 50))));
+	for(int i = 80; i > 0; i -= 20)
 		snake.push_back(pair< pair<int, int>, Element* >(pair<int, int>(i + 20, 50), new Element(screen, elem, pair<int, int>(i, 50))));
 
 	key = 2;
@@ -134,19 +134,23 @@ int main()
                     		switch(e.key.keysym.sym)
                     		{
                         		case SDLK_UP:
-                            			key = 3;
+						if(key != 4)
+                            				key = 3;
                             		break;
 
                         		case SDLK_DOWN:
-                            			key = 4;
+						if(key != 3)
+                            				key = 4;
                             		break;
 
                         		case SDLK_LEFT:
-                            			key = 1;
+						if(key != 2)
+                            				key = 1;
                             		break;
 
                         		case SDLK_RIGHT:
-                            			key = 2;
+						if(key |= 1)
+                            				key = 2;
                             		break;
                     		}
 
