@@ -1,5 +1,5 @@
 CC=g++
-LIBS=-lSDL
+LIBS=-lSDL -lSDL_ttf
 
 all: mahsnake
 
