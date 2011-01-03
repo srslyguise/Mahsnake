@@ -198,6 +198,7 @@ int move(void * p)
 	ThreadS * ts = static_cast<ThreadS *>(p);
 	Element food(ts->screen, ts->food, pair<int, int>(200, 200));
 	SDL_Rect head_p, food_p;
+	pair<int, int> coord;
 	pair<int, int> rand_pos;
 
 	food.Move();
@@ -210,9 +211,9 @@ int move(void * p)
 		switch(key)
 		{
 			case 1:
-				if(snake[0].second->getPos().first > ELEM_SIZE)
+				if(snake[0].second->getPos().first > (ELEM_SIZE / 2))
 				{
-					pair<int, int> coord = snake[0].second->getPos();
+					coord = snake[0].second->getPos();
 					snake[0].second->Move();
 
 					for(int i = 1; i < snake.size(); i++)
@@ -228,15 +229,15 @@ int move(void * p)
 				}
 				else
 				{
-					cout << "You lost" << endl;
-					alive = false;
+					coord = snake[0].second->getPos();
+					snake[0].second->setPos(make_pair(ts->screen->w - (ELEM_SIZE / 2), coord.second));
 				}
 			break;
 
 			case 2:
-				if(snake[0].second->getPos().first < (ts->screen->w - ELEM_SIZE))
+				if(snake[0].second->getPos().first < (ts->screen->w - (ELEM_SIZE / 2)))
 				{
-					pair<int, int> coord = snake[0].second->getPos();
+					coord = snake[0].second->getPos();
 					snake[0].second->Move();
 
 					for(int i = 1; i < snake.size(); i++)
@@ -252,15 +253,15 @@ int move(void * p)
 				}
 				else
 				{
-					cout << "You lost" << endl;
-					alive = false;
+					coord = snake[0].second->getPos();
+					snake[0].second->setPos(make_pair((ELEM_SIZE / 2), coord.second));
 				}
 			break;
 
 			case 3:
-				if(snake[0].second->getPos().second > ELEM_SIZE)
+				if(snake[0].second->getPos().second > (ELEM_SIZE / 2))
 				{
-					pair<int, int> coord = snake[0].second->getPos();
+					coord = snake[0].second->getPos();
 					snake[0].second->Move();
 
 					for(int i = 1; i < snake.size(); i++)
@@ -276,15 +277,15 @@ int move(void * p)
 				}
 				else
 				{
-					cout << "You lost" << endl;
-					alive = false;
+					coord = snake[0].second->getPos();
+					snake[0].second->setPos(make_pair(coord.first, ts->screen->h - (ELEM_SIZE / 2)));
 				}
 			break;
 
 			case 4:
-				if(snake[0].second->getPos().second < (ts->screen->h - ELEM_SIZE))
+				if(snake[0].second->getPos().second < (ts->screen->h - (ELEM_SIZE / 2)))
 				{
-					pair<int, int> coord = snake[0].second->getPos();
+					coord = snake[0].second->getPos();
 					snake[0].second->Move();
 
 					for(int i = 1; i < snake.size(); i++)
@@ -300,8 +301,8 @@ int move(void * p)
 				}
 				else
 				{
-					cout << "You lost" << endl;
-					alive = false;
+					coord = snake[0].second->getPos();
+					snake[0].second->setPos(make_pair(coord.first, (ELEM_SIZE / 2)));
 				}
 			break;
 		}
