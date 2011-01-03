@@ -1,10 +1,9 @@
 #include <iostream>
 #include <utility>
 #include <vector>
-#include <cmath>
+#include <ctime>
 #include <SDL/SDL.h>
 
-#define PI 3.14159265
 #define ELEM_SIZE 20
 
 #define DEBUG
@@ -28,6 +27,13 @@ vector< pair< pair<int, int>, Element* > > snake;
 void drawelement(SDL_Surface *, SDL_Surface *, uint16_t, uint16_t, uint16_t, uint16_t);
 void cleanrectangle(SDL_Surface *, uint16_t, uint16_t, uint16_t, uint16_t);
 int move(void *);
+
+typedef struct ThreadS
+{
+	SDL_Surface * screen;
+	SDL_Surface * elem;
+	SDL_Surface * food;
+}ThreadS;
 
 class Element
 {
@@ -68,8 +74,10 @@ int main()
 	SDL_Surface * background_tmp = NULL;
 	SDL_Surface * elem_tmp = NULL;
 	SDL_Surface * elem = NULL;
+	SDL_Surface * food_tmp = NULL;
 	SDL_Event e;
 	SDL_Thread * move_t = NULL;
+	ThreadS ts;
 	int pressed = 0;
 	
 	if(SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -110,13 +118,25 @@ int main()
 	elem = SDL_DisplayFormat(elem_tmp);
 	SDL_FreeSurface(elem_tmp);
 
-	snake.push_back(pair< pair<int, int>, Element* >(pair<int, int>(-1, -1), new Element(screen, elem, pair<int, int>(100, 50))));
-	for(int i = 80; i > 0; i -= 20)
+	snake.push_back(pair< pair<int, int>, Element* >(pair<int, int>(-1, -1), new Element(screen, elem, pair<int, int>(80, 50))));
+	for(int i = 60; i > 0; i -= 20)
 		snake.push_back(pair< pair<int, int>, Element* >(pair<int, int>(i + 20, 50), new Element(screen, elem, pair<int, int>(i, 50))));
 
 	key = 2;
 	alive = true;
-	move_t = SDL_CreateThread(move, static_cast<void *>(screen));
+	ts.screen = screen;
+
+	food_tmp = SDL_LoadBMP("food.bmp");
+	if(food_tmp == NULL){
+		cout << "Can't load food bitmap" << endl;
+		exit(1);
+	}
+
+	ts.food = SDL_DisplayFormat(food_tmp);
+	ts.elem = elem;
+	SDL_FreeSurface(food_tmp);
+
+	move_t = SDL_CreateThread(move, static_cast<void *>(&ts));
 
 	while((!pressed) && alive)
 	{
@@ -162,6 +182,7 @@ int main()
     	}
 
 	SDL_WaitThread(move_t, NULL);
+	SDL_FreeSurface(ts.food);
 	SDL_FreeSurface(elem);
 	SDL_FreeSurface(background);
 	SDL_FreeSurface(screen);
@@ -174,9 +195,15 @@ int main()
 
 int move(void * p)
 {
-	SDL_Surface * screen = static_cast<SDL_Surface *>(p);
+	ThreadS * ts = static_cast<ThreadS *>(p);
+	Element food(ts->screen, ts->food, pair<int, int>(200, 200));
+	SDL_Rect head_p, food_p;
+	pair<int, int> rand_pos;
+
+	food.Move();
 
 	DEBUG_PRINT("Move thread starting");
+	srand(time(NULL));
 
 	while(alive)
 	{
@@ -195,6 +222,8 @@ int move(void * p)
 						snake.at(i).first = ((i - 1) == 0) ? make_pair(coord.first - ELEM_SIZE, coord.second) : snake.at(i - 1).second->getPos();
 					}
 
+					SDL_Flip(ts->screen);
+
 					snake[0].second->setPos(make_pair(coord.first - ELEM_SIZE, coord.second));
 				}
 				else
@@ -205,7 +234,7 @@ int move(void * p)
 			break;
 
 			case 2:
-				if(snake[0].second->getPos().first < (screen->w - ELEM_SIZE))
+				if(snake[0].second->getPos().first < (ts->screen->w - ELEM_SIZE))
 				{
 					pair<int, int> coord = snake[0].second->getPos();
 					snake[0].second->Move();
@@ -216,6 +245,8 @@ int move(void * p)
 						snake.at(i).second->setPos(snake.at(i).first);
 						snake.at(i).first = ((i - 1) == 0) ? make_pair(coord.first + ELEM_SIZE, coord.second) : snake.at(i - 1).second->getPos();
 					}
+
+					SDL_Flip(ts->screen);
 
 					snake[0].second->setPos(make_pair(coord.first + ELEM_SIZE, coord.second));
 				}
@@ -239,6 +270,8 @@ int move(void * p)
 						snake.at(i).first = ((i - 1) == 0) ? make_pair(coord.first, coord.second - ELEM_SIZE) : snake.at(i - 1).second->getPos();
 					}
 
+					SDL_Flip(ts->screen);
+
 					snake[0].second->setPos(make_pair(coord.first, coord.second - ELEM_SIZE));
 				}
 				else
@@ -249,7 +282,7 @@ int move(void * p)
 			break;
 
 			case 4:
-				if(snake[0].second->getPos().second < (screen->h - ELEM_SIZE))
+				if(snake[0].second->getPos().second < (ts->screen->h - ELEM_SIZE))
 				{
 					pair<int, int> coord = snake[0].second->getPos();
 					snake[0].second->Move();
@@ -261,6 +294,8 @@ int move(void * p)
 						snake.at(i).first = ((i - 1) == 0) ? make_pair(coord.first, coord.second + ELEM_SIZE) : snake.at(i - 1).second->getPos();
 					}
 
+					SDL_Flip(ts->screen);
+
 					snake[0].second->setPos(make_pair(coord.first, coord.second + ELEM_SIZE));
 				}
 				else
@@ -271,7 +306,39 @@ int move(void * p)
 			break;
 		}
 
-		SDL_Delay(50);
+		head_p.x = snake[0].second->getPos().first - (ELEM_SIZE / 2);
+		head_p.y = snake[0].second->getPos().second - (ELEM_SIZE / 2);
+		head_p.w = ELEM_SIZE;
+		head_p.h = ELEM_SIZE;
+
+		food_p.x = food.getPos().first - (ELEM_SIZE / 2);
+		food_p.y = food.getPos().second - (ELEM_SIZE / 2);
+		food_p.w = ELEM_SIZE;
+		food_p.h = ELEM_SIZE;
+
+		if((head_p.x <= (food_p.x + food_p.w)) && 
+			((head_p.y <= (food_p.y + food_p.h))) &&
+			(((head_p.x + head_p.w) >= food_p.x)) &&
+			(((head_p.y + head_p.h) >= food_p.y)))
+		{
+			while((rand_pos.first = (rand() % ts->screen->w)) != 0)
+				if(((rand_pos.first % ELEM_SIZE) == 0) && (rand_pos.first != 0))
+					break;
+
+			while((rand_pos.second = (rand() % ts->screen->h)) != 0)
+				if(((rand_pos.second % ELEM_SIZE) == 0) && (rand_pos.second != 0))
+					break;
+
+			DEBUG_PRINT(rand_pos.first << ", " << rand_pos.second);
+
+			food.setPos(rand_pos);
+			food.Move();
+
+			snake.push_back(pair< pair<int, int>, Element* >((*(snake.rbegin())).second->getPos(), new Element(ts->screen, ts->elem, (*(snake.rbegin())).second->getPos())));
+		}
+
+		SDL_Delay(100);
+		
 	}
 	alive = false;
 
@@ -290,7 +357,6 @@ void drawelement(SDL_Surface * in, SDL_Surface * out, uint16_t x, uint16_t y, ui
     	rect.h = height;
 
 	SDL_BlitSurface(in, NULL, out, &rect);
-	SDL_Flip(out);
 }
 
 void cleanrectangle(SDL_Surface * screen, uint16_t x, uint16_t y, uint16_t base, uint16_t height)
@@ -303,5 +369,4 @@ void cleanrectangle(SDL_Surface * screen, uint16_t x, uint16_t y, uint16_t base,
     	rect.h = height;
 
 	SDL_BlitSurface(background, &rect, screen, &rect);
-	SDL_Flip(screen);
 }
