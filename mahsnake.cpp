@@ -1,10 +1,14 @@
 #include <iostream>
+#include <sstream>
 #include <utility>
 #include <vector>
 #include <ctime>
 #include <SDL/SDL.h>
+#include <SDL/SDL_ttf.h>
 
 #define ELEM_SIZE 20
+#define FONT "/usr/share/fonts/X11/TTF/luximb.ttf"
+#define FONT_SIZE 12
 
 #define DEBUG
 
@@ -26,6 +30,7 @@ vector< pair< pair<int, int>, Element* > > snake;
 
 void drawelement(SDL_Surface *, SDL_Surface *, uint16_t, uint16_t, uint16_t, uint16_t);
 void cleanrectangle(SDL_Surface *, uint16_t, uint16_t, uint16_t, uint16_t);
+void putstring(SDL_Surface *, TTF_Font *, const char *, uint16_t, uint16_t, uint8_t, uint8_t, uint8_t);
 int move(void *);
 
 typedef struct ThreadS
@@ -48,7 +53,7 @@ class Element
 		virtual Element& Move()
 		{
 			if(prev.first != -1)
-				cleanrectangle(screen, prev.first, prev.second, ELEM_SIZE + 1, ELEM_SIZE + 1);
+				cleanrectangle(screen, prev.first, prev.second, ELEM_SIZE, ELEM_SIZE);
 
 			drawelement(element, screen, pos.first, pos.second, ELEM_SIZE, ELEM_SIZE);
 			prev = pos;
@@ -197,11 +202,25 @@ int move(void * p)
 {
 	ThreadS * ts = static_cast<ThreadS *>(p);
 	Element food(ts->screen, ts->food, pair<int, int>(200, 200));
-	SDL_Rect head_p, food_p;
+	SDL_Rect head_p, food_p, elem_p;
 	pair<int, int> coord;
 	pair<int, int> rand_pos;
+	uint32_t score = 0;
+	stringstream score_s;
+	TTF_Font* font;
+
+	TTF_Init();
+
+	if((font = TTF_OpenFont(FONT, FONT_SIZE)) == NULL)
+	{
+		cout << "Impossibile caricare il font: " << SDL_GetError() << endl;
+		alive = false;
+		DEBUG_PRINT("Move thread ending");
+		return -1;
+	}
 
 	food.Move();
+	putstring(ts->screen, font, "Score: 0", (ts->screen->w / 2), FONT_SIZE, 0xff, 0x00, 0x00);
 
 	DEBUG_PRINT("Move thread starting");
 	srand(time(NULL));
@@ -222,8 +241,6 @@ int move(void * p)
 						snake.at(i).second->setPos(snake.at(i).first);
 						snake.at(i).first = ((i - 1) == 0) ? make_pair(coord.first - ELEM_SIZE, coord.second) : snake.at(i - 1).second->getPos();
 					}
-
-					SDL_Flip(ts->screen);
 
 					snake[0].second->setPos(make_pair(coord.first - ELEM_SIZE, coord.second));
 				}
@@ -247,8 +264,6 @@ int move(void * p)
 						snake.at(i).first = ((i - 1) == 0) ? make_pair(coord.first + ELEM_SIZE, coord.second) : snake.at(i - 1).second->getPos();
 					}
 
-					SDL_Flip(ts->screen);
-
 					snake[0].second->setPos(make_pair(coord.first + ELEM_SIZE, coord.second));
 				}
 				else
@@ -270,8 +285,6 @@ int move(void * p)
 						snake.at(i).second->setPos(snake.at(i).first);
 						snake.at(i).first = ((i - 1) == 0) ? make_pair(coord.first, coord.second - ELEM_SIZE) : snake.at(i - 1).second->getPos();
 					}
-
-					SDL_Flip(ts->screen);
 
 					snake[0].second->setPos(make_pair(coord.first, coord.second - ELEM_SIZE));
 				}
@@ -295,8 +308,6 @@ int move(void * p)
 						snake.at(i).first = ((i - 1) == 0) ? make_pair(coord.first, coord.second + ELEM_SIZE) : snake.at(i - 1).second->getPos();
 					}
 
-					SDL_Flip(ts->screen);
-
 					snake[0].second->setPos(make_pair(coord.first, coord.second + ELEM_SIZE));
 				}
 				else
@@ -318,9 +329,9 @@ int move(void * p)
 		food_p.h = ELEM_SIZE;
 
 		if((head_p.x <= (food_p.x + food_p.w)) && 
-			((head_p.y <= (food_p.y + food_p.h))) &&
-			(((head_p.x + head_p.w) >= food_p.x)) &&
-			(((head_p.y + head_p.h) >= food_p.y)))
+		((head_p.y <= (food_p.y + food_p.h))) &&
+		(((head_p.x + head_p.w) >= food_p.x)) &&
+		(((head_p.y + head_p.h) >= food_p.y)))
 		{
 			while((rand_pos.first = (rand() % ts->screen->w)) != 0)
 				if(((rand_pos.first % ELEM_SIZE) == 0) && (rand_pos.first != 0))
@@ -336,9 +347,38 @@ int move(void * p)
 			food.Move();
 
 			snake.push_back(pair< pair<int, int>, Element* >((*(snake.rbegin())).second->getPos(), new Element(ts->screen, ts->elem, (*(snake.rbegin())).second->getPos())));
+
+			score += 3;
 		}
 
-		SDL_Delay(100);
+		for(int i = 1; i < snake.size(); i++)
+		{
+			elem_p.x = snake.at(i).second->getPos().first - (ELEM_SIZE / 2);
+			elem_p.y = snake.at(i).second->getPos().second - (ELEM_SIZE / 2);
+			elem_p.w = ELEM_SIZE;
+			elem_p.h = ELEM_SIZE;
+
+			if((head_p.x < (elem_p.x + elem_p.w)) &&
+			(head_p.y < (elem_p.y + elem_p.h)) &&
+			((head_p.x + head_p.w) > elem_p.x) &&
+			((head_p.y + head_p.h) > elem_p.y))
+			{
+				score_s.str("");
+				score_s << "You lost, final score: " << score;
+				SDL_BlitSurface(background, NULL, ts->screen, NULL);
+				putstring(ts->screen, font, score_s.str().c_str(), (ts->screen->w / 2), (ts->screen->h / 2), 0xff, 0x00, 0x00);
+				SDL_Flip(ts->screen);
+				DEBUG_PRINT("Move thread ending");
+				return 0;
+			}
+		}
+
+		score_s.str("");
+		score_s << "Score: " << score;
+		putstring(ts->screen, font, score_s.str().c_str(), (ts->screen->w / 2), FONT_SIZE, 0xff, 0x00, 0x00);
+
+		SDL_Flip(ts->screen);
+		SDL_Delay(50);
 		
 	}
 	alive = false;
@@ -370,4 +410,24 @@ void cleanrectangle(SDL_Surface * screen, uint16_t x, uint16_t y, uint16_t base,
     	rect.h = height;
 
 	SDL_BlitSurface(background, &rect, screen, &rect);
+}
+
+void putstring(SDL_Surface * screen, TTF_Font * font, const char * string, uint16_t x, uint16_t y, uint8_t R, uint8_t G, uint8_t B)
+{
+	SDL_Surface * fontSurface;
+	SDL_Color color;
+	SDL_Rect fontRect;
+
+	color.r = R;
+	color.g = G;
+	color.b = B;
+
+	fontSurface = TTF_RenderText_Solid(font, string, color);
+        fontRect.x = x - (fontSurface->w / 2);
+        fontRect.y = y - (fontSurface->h / 2);
+
+	cleanrectangle(screen, fontRect.x, fontRect.y, fontSurface->w * 2, fontSurface->h + FONT_SIZE);
+        SDL_BlitSurface(fontSurface, NULL, screen, &fontRect);
+	SDL_Flip(screen);
+	SDL_FreeSurface(fontSurface);
 }
