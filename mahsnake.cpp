@@ -174,7 +174,7 @@ int main()
                             		break;
 
                         		case SDLK_RIGHT:
-						if(key |= 1)
+						if(key != 1)
                             				key = 2;
                             		break;
                     		}
